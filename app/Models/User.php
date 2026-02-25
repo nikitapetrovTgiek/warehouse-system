@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
     ];
 
     /**
@@ -44,5 +45,26 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+    // связь с ролью
+     public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * проверка роли     
+     */
+    public function hasRole($roleName)
+    {
+        return $this->role && $this->role->name === $roleName;
+    }
+
+    /**
+     * название роли по-русски
+     */
+    public function getRoleNameAttribute()
+    {
+        return $this->role ? $this->role->description : 'Не назначена';
     }
 }

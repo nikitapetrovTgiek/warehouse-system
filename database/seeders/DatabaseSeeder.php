@@ -15,11 +15,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
        $this->call([
-            RoleSeeder::class,  // Сначала создаём роли
-            // Потом добавим другие сидеры:
-            // UserSeeder::class,
-            // ProductSeeder::class,
-            // StorageLocationSeeder::class,
+            RoleSeeder::class,
+            UserSeeder::class, 
+            ProductSeeder::class,
+            StorageLocationSeeder::class,
+            BatchSeeder::class,
+            MovementSeeder::class,
         ]);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
@@ -16,7 +17,7 @@ class CheckRole
      * @param  string  $role  // роль которую проверяем (admin, manager, worker)
      * @return mixed
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, $role): Response
     {
          // Проверка авторизован ли пользователь
         if (!Auth::check()) {
@@ -26,11 +27,10 @@ class CheckRole
         $user = Auth::user();
         // Есть ли у пользователя нужная роль
         // Используем метод hasRole()
-        if (!$user->hasRole($role)) {
+        if (!$user->hasRole($role) && !$user->hasRole('admin')) {
             // Если роль не совпадает ошибка
             abort(403, 'У вас нет прав для доступа к этой странице');
         }
-        // Если всё хорошо пропускаем запрос дальше
         return $next($request);
     }
 }

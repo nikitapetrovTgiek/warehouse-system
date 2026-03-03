@@ -51,7 +51,6 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Role::class);
     }
-
     /**
      * проверка роли     
      */
@@ -59,7 +58,6 @@ class User extends Authenticatable
     {
         return $this->role && $this->role->name === $roleName;
     }
-
     /**
      * название роли по-русски
      */

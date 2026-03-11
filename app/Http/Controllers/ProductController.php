@@ -15,52 +15,80 @@ class ProductController extends Controller
         $products = Product::all();
         return view('products.index', compact('products'));
     }
-
     /**
-     * Show the form for creating a new resource.
+     * Форма создания нового товара
      */
     public function create()
     {
-        //
+        return view('products.create');
     }
-
     /**
-     * Store a newly created resource in storage.
+     * Сохранение нового товара
      */
     public function store(Request $request)
     {
-        //
+        // Валидация данных
+        $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'article' => 'required|string|max:100|unique:products',
+        'barcode' => 'nullable|string|max:50',
+        'description' => 'nullable|string',
+        'price' => 'required|numeric|min:0',
+    ]);
+        Product::create($validated);
+        return redirect()->route('products.index')
+        ->with('success', 'Товар успешно добавлен');
+    }
+    /**
+     * Просмотр товара
+     */
+    public function show(Product $product)
+    {
+        // Загружаем связанные партии и движения
+        $product->load(['batches', 'movements' => function ($q) {
+        $q->latest()->limit(10); // последние 10 движений
+    }]);
+        return view('products.show', compact('product'));
+    }
+    /**
+     * Редактирование товара (форма)
+     */
+    public function edit(Product $product)
+    {
+        return view('products.edit', compact('product'));
+    }
+    /**
+     * Обновить товар
+     */
+    public function update(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'article' => 'required|string|max:100|unique:products,article,' . $product->id,
+        'barcode' => 'nullable|string|max:50',
+        'description' => 'nullable|string',
+        'price' => 'required|numeric|min:0',
+    ]);
+        $product->update($validated);
+        return redirect()->route('products.index')
+        ->with('success', 'Товар успешно обновлён');
     }
 
     /**
-     * Display the specified resource.
+     * Удалить товар
      */
-    public function show(string $id)
+    public function destroy(Product $product)
     {
-        //
+        // Проверяем, можно ли удалить, если есть движения товар удалить нельзя
+        if ($product->movements()->exists()) {
+        return redirect()
+            ->route('products.index')
+            ->with('error', 'Нельзя удалить товар, по которому были движения');
     }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        // в противном случае удаляем
+        $product->delete();
+        return redirect()
+        ->route('products.index')
+        ->with('success', 'Товар успешно удалён');
     }
 }

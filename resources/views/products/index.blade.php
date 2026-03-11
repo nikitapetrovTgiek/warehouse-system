@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Список товаров</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -38,6 +39,18 @@
     <!-- Основной контент -->
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
+            @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+            @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
             <h1>Список товаров</h1>
             <a href="{{ route('products.create') }}" class="btn btn-success">+ Добавить товар</a>
         </div>
@@ -63,15 +76,15 @@
                             <td>{{ $product->id }}</td>
                             <td>{{ $product->name }}</td>
                             <td>{{ $product->article }}</td>
-                            <td>{{ $product->barcode ?? '—' }}</td>
+                            <td>{{ $product->barcode ?? '-' }}</td>
                             <td>{{ number_format($product->price, 2) }} ₽</td>
                             <td>
-                                <a href="{{ route('products.show', $product) }}" class="btn btn-sm btn-info">👁️</a>
-                                <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-warning">✏️</a>
+                                <a href="{{ route('products.show', $product) }}" class="btn btn-sm btn-info" title="Просмотр"><i class="fas fa-eye"></i></a>
+                                <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-warning" title="Редактировать"><i class="fas fa-edit"></i></a>
                                 <form method="POST" action="{{ route('products.destroy', $product) }}" class="d-inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Удалить товар?')">🗑️</button>
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Удалить товар?')" title="Удалить"> <i class="fas fa-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -81,5 +94,6 @@
             @endif
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html> 

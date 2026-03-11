@@ -23,20 +23,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// ============================================================
-// МАРШРУТЫ, ТРЕБУЮЩИЕ АВТОРИЗАЦИИ
-// ============================================================
+// Маршруты, требующие авторизацию
 Route::middleware(['auth'])->group(function () {
     
-    // --------------------------------------------------------
-    // ДАШБОРД (главная после входа)
-    // --------------------------------------------------------
+    // Главная после входа
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
-    
-    // --------------------------------------------------------
-    // ПРОДУКТЫ (товары) - доступны менеджерам и админам
-    // --------------------------------------------------------
+
+    // Товары доступны (менеджерам и админам)
     Route::middleware(['role:manager'])->prefix('products')->name('products.')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::get('/create', [ProductController::class, 'create'])->name('create');
@@ -46,10 +40,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{product}', [ProductController::class, 'update'])->name('update');
         Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy');
     });
-    
-    // --------------------------------------------------------
-    // МЕСТА ХРАНЕНИЯ - доступны менеджерам и админам
-    // --------------------------------------------------------
+
+    // Места хранения (доступны менеджерам и админам)
     Route::middleware(['role:manager'])->prefix('locations')->name('locations.')->group(function () {
         Route::get('/', [StorageLocationController::class, 'index'])->name('index');
         Route::get('/create', [StorageLocationController::class, 'create'])->name('create');
@@ -60,9 +52,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{location}', [StorageLocationController::class, 'destroy'])->name('destroy');
     });
     
-    // --------------------------------------------------------
-    // ПАРТИИ - доступны менеджерам и админам
-    // --------------------------------------------------------
+    // Партии (доступны менеджерам и админам)
     Route::middleware(['role:manager'])->prefix('batches')->name('batches.')->group(function () {
         Route::get('/', [BatchController::class, 'index'])->name('index');
         Route::get('/create', [BatchController::class, 'create'])->name('create');
@@ -73,26 +63,24 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{batch}', [BatchController::class, 'destroy'])->name('destroy');
     });
     
-    // --------------------------------------------------------
-    // СКЛАДСКИЕ ОПЕРАЦИИ (доступны кладовщикам и выше)
-    // --------------------------------------------------------
+    // Складские операции (доступны кладовщикам и выше)
     Route::middleware(['role:worker'])->prefix('movements')->name('movements.')->group(function () {
         // Список операций
         Route::get('/', [MovementController::class, 'index'])->name('index');
         
-        // ПРИЁМКА товаров
+        // Приемка товаров
         Route::get('/receipt', [MovementController::class, 'createReceipt'])->name('receipt.create');
         Route::post('/receipt', [MovementController::class, 'storeReceipt'])->name('receipt.store');
         
-        // ОТГРУЗКА товаров
+        // Отгрузка товаров
         Route::get('/shipment', [MovementController::class, 'createShipment'])->name('shipment.create');
         Route::post('/shipment', [MovementController::class, 'storeShipment'])->name('shipment.store');
         
-        // ПЕРЕМЕЩЕНИЕ между ячейками
+        // Перемещение между ячейками
         Route::get('/transfer', [MovementController::class, 'createTransfer'])->name('transfer.create');
         Route::post('/transfer', [MovementController::class, 'storeTransfer'])->name('transfer.store');
         
-        // СПИСАНИЕ товаров
+        // Списание товаров
         Route::get('/write-off', [MovementController::class, 'createWriteOff'])->name('write-off.create');
         Route::post('/write-off', [MovementController::class, 'storeWriteOff'])->name('write-off.store');
         
@@ -100,9 +88,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{movement}', [MovementController::class, 'show'])->name('show');
     });
     
-    // --------------------------------------------------------
-    // ОТЧЁТЫ (доступны менеджерам и админам)
-    // --------------------------------------------------------
+    // Отчеты (доступны менеджерам и админам)
     Route::middleware(['role:manager'])->prefix('reports')->name('reports.')->group(function () {
         Route::get('/stock', [ReportController::class, 'stock'])->name('stock');
         Route::get('/movements', [ReportController::class, 'movements'])->name('movements');
@@ -110,9 +96,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/expired', [ReportController::class, 'expired'])->name('expired');
     });
     
-    // --------------------------------------------------------
-    // АДМИН-ПАНЕЛЬ (только для администраторов)
-    // --------------------------------------------------------
+    // Админка (только для администраторов)
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
         Route::resource('users', App\Http\Controllers\Admin\UserController::class);

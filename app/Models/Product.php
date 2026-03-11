@@ -8,9 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 /**
  * Модель для работы с таблицей 'products'
  * 
- * Связи:
- * - hasMany(Batch::class)  - у товара много партий
- * - hasMany(InventoryMovement::class) - у товара много движений
+ * у товара много партий
+ * у товара много движений
  */
 
 class Product extends Model
@@ -25,24 +24,21 @@ class Product extends Model
         'price',        // цена
     ];
      /**
-     * СВЯЗЬ С ПАРТИЯМИ (batches)
-     * Один товар может иметь МНОГО партий
+     * связь с партиями (batches)
      */
     public function batches()
     {
         return $this->hasMany(Batch::class);
     }
      /**
-     * СВЯЗЬ С ДВИЖЕНИЯМИ (inventory_movements)
-     * Один товар может участвовать во МНОГИХ движениях
+     * связь с движениями (inventory_movements)
      */
     public function movements()
     {
         return $this->hasMany(InventoryMovement::class);
     }
     /**
-     * Вспомогательное поле - текущий остаток на складе
-     * (будет вычисляться динамически)
+     * вспомогательное поле текущий остаток на складе
      */
     public function getCurrentStockAttribute()
     {

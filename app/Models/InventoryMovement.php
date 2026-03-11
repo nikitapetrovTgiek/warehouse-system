@@ -9,12 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * Модель для учёта движений товаров на складе
  * 
- * Связи:
- * Product - движение относится к одному товару
- * Batch движение может относиться к партии
- * StorageLocation 'from_location_id' - откуда
- * StorageLocation 'to_location_id' - куда
- * User - кто сделал
+ * движение относится к одному товару
+ * движение может относиться к партии
  */
 
 class InventoryMovement extends Model
@@ -43,7 +39,6 @@ class InventoryMovement extends Model
         'deleted_at' => 'datetime',
     ];
      /**
-     * Товары 
      * Каждое движение относится к одному товару
      */
     public function product()
@@ -52,7 +47,7 @@ class InventoryMovement extends Model
     }
 
     /**
-     * Партии (может быть NULL)
+     * Партии (может быть 0)
      */
     public function batch()
     {
@@ -103,7 +98,7 @@ class InventoryMovement extends Model
         return $this->movement_type === 'write_off';
     }
     /**
-     * Виртуальное поле - тип операции по-русски
+     * Виртуальное поле тип операции по русски
      */
     public function getMovementTypeNameAttribute()
     {

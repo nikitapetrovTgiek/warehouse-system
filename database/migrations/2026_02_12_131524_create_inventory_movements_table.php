@@ -15,11 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('product_id') // связь с таблицей products
                   ->constrained('products')
-                  ->onDelete('cascade'); // если товар удалён — движения тоже не нужны
+                  ->onDelete('cascade'); // если товар удалён движения тоже не нужны
             $table->foreignId('batch_id') // связь с таблицей batches
                   ->nullable()
                   ->constrained('batches')
-                  ->onDelete('set null'); // если партию удалили — останется NULL      
+                  ->onDelete('set null'); // если партию удалили останется NULL      
             $table->foreignId('from_location_id') // связь с таблицей storage_locations (откуда переместили)
                   ->nullable()
                   ->constrained('storage_locations')
@@ -41,7 +41,7 @@ return new class extends Migration
                 'inventory'    // Инвентаризация (корректировка)
             ]);      
             $table->integer('quantity');
-            $table->string('document_number')->nullable(); // Накладная, счёт-фактура
+            $table->string('document_number')->nullable(); // Накладная
             $table->string('document_type')->nullable(); 
             $table->text('comments')->nullable();
             $table->enum('status', ['draft', 'confirmed', 'cancelled'])

@@ -14,23 +14,47 @@ class CheckRole
      *
      * @param  \Closure(\Illuminate\Http\Request):  $next
      * @param  \Closure  $next
-     * @param  string  $role  // роль которую проверяем (admin, manager, worker)
+     * @param  string  $roles  // роли которые проверяем (admin, manager, worker)
      * @return mixed
      */
-    public function handle(Request $request, Closure $next, $role): Response
+    public function handle(Request $request, Closure $next, $roles): Response
     {
-         // Проверка авторизован ли пользователь
+        // проверка авторизации
         if (!Auth::check()) {
             return redirect('/login')->with('error', 'Сначала войдите в систему');
         }
-        // Текущий пользователь
+
         $user = Auth::user();
-        // Есть ли у пользователя нужная роль
-        // Используем метод hasRole()
-        if (!$user->hasRole($role) && !$user->hasRole('admin')) {
-            // Если роль не совпадает ошибка
-            abort(403, 'У вас нет прав для доступа к этой странице');
+        if ($user->hasRole('admin')) {
+            return $next($request);
         }
-        return $next($request);
-    }
+        $roles = array_map('trim', (array) $roles);
+
+        // иерархия ролей
+        $hierarchy = [
+            'worker' => ['admin', 'manager', 'worker'],
+            'manager' => ['manager', 'admin'],
+            'admin' => ['admin'], 
+        ];
+
+        // все допустимые роли для текущего маршрута
+        $allowedRoles = [];
+        foreach ($roles as $role) {
+            if (isset($hierarchy[$role])) {
+                $allowedRoles = array_merge($allowedRoles, $hierarchy[$role]);
+            } else {
+                $allowedRoles[] = $role;
+            }
+        }
+        $allowedRoles = array_unique($allowedRoles);
+
+        // проверка есть ли хоть одна из нужных ролей
+        foreach ($allowedRoles as $role) {
+            if ($user->hasRole($role)) {
+                return $next($request);
+            }
+        }
+        // Если ничего не подошло
+        abort(403, 'У вас нет прав для доступа к этой странице');
+        }
 }

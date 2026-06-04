@@ -7,6 +7,8 @@ use App\Models\Batch;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use App\Models\InventoryMovement;
+use App\Models\StorageLocation;
+use Illuminate\Support\Facades\DB;
 
 class BatchController extends Controller
 {
@@ -28,8 +30,11 @@ class BatchController extends Controller
     public function create()
     {
         $products = Product::orderBy('name')->get();
+        $locations = StorageLocation::where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
-        return view('batches.create', compact('products'));
+        return view('batches.create', compact('products', 'locations'));
     }
 
     /**
@@ -37,21 +42,57 @@ class BatchController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'product_id' => 'required|exists:products,id',
             'batch_number' => 'required|string|max:255|unique:batches,batch_number',
             'manufactured_date' => 'nullable|date',
             'expiration_date' => 'nullable|date|after:manufactured_date',
             'certificate' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'quantity' => 'required|integer|min:1',
+            'location_id' => 'required|exists:storage_locations,id',
     ]);
-        // id текущего пользователя как создатель
-        $validated['created_by'] = Auth::id();
-        Batch::create($validated);
+            // проверка хватит ли места
+        $location = StorageLocation::findOrFail($request->location_id);
+        if ($location->capacity && $location->available_capacity < $request->quantity) {
+            return back()->withInput()->withErrors(['location_id' => 'Недостаточно свободного места в этой ячейке']);
+        }
 
-        return redirect()
-            ->route('batches.index')
-            ->with('success', 'Партия успешно добавлена');
+        DB::beginTransaction();
+
+        try {
+            // создаём партию
+            $batch = Batch::create([
+                'product_id' => $request->product_id,
+                'batch_number' => $request->batch_number,
+                'manufactured_date' => $request->manufactured_date,
+                'expiration_date' => $request->expiration_date,
+                'notes' => $request->notes,
+                'created_by' => auth()->id(),
+            ]);
+
+            // создаём движение приёмки
+            InventoryMovement::create([
+                'product_id' => $request->product_id,
+                'batch_id' => $batch->id,
+                'to_location_id' => $request->location_id,
+                'user_id' => auth()->id(),
+                'movement_type' => 'receipt',
+                'quantity' => $request->quantity,
+                'status' => 'confirmed',
+                'comments' => 'Создано автоматически при добавлении партии',
+            ]);
+
+            // обновление загрузки места
+            $location->increment('current_load', $request->quantity);
+            DB::commit();
+
+            return redirect()->route('batches.index')
+                ->with('success', "Партия '{$batch->batch_number}' создана, товар принят на склад ({$request->quantity} шт.)");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Ошибка при создании: ' . $e->getMessage());
+        }
     }
 
     /**

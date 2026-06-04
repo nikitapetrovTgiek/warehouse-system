@@ -36,9 +36,7 @@ return new class extends Migration
                 'receipt',     // Приёмка (товар пришёл)
                 'shipment',    // Отгрузка (товар уехал)
                 'transfer',    // Перемещение (между ячейками)
-                'write_off',   // Списание (брак, порча)
-                'return',      // Возврат от клиента
-                'inventory'    // Инвентаризация (корректировка)
+                'write_off'   // Списание (брак, порча)
             ]);      
             $table->integer('quantity');
             $table->string('document_number')->nullable(); // Накладная

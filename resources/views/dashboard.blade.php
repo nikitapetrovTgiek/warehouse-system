@@ -1,86 +1,139 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель управления</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="#">Складская система</a>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-item nav-link">{{ Auth::user()->name }} ({{ Auth::user()->role_name }})</span>
-                <form method="POST" action="{{ route('logout') }}" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-light btn-sm">Выйти</button>
-                </form>
-            </div>
-        </div>
-    </nav>
+@extends('layouts.app')
 
-    <div class="container mt-4">
-        <h1 class="mb-4">Добро пожаловать, {{ Auth::user()->name }}!</h1>
-        
-        <div class="row">
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Товары</h5>
-                        <p class="card-text">Управление номенклатурой</p>
-                        <a href="{{ route('products.index') }}" class="btn btn-primary">Перейти</a>
-                    </div>
-                </div>
+@section('title', 'Панель управления')
+
+@section('content')
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+    <i class="fas fa-home text-primary me-2"></i> Добро пожаловать, {{ Auth::user()->name }}!
+    </h1>
+    <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill">{{ Auth::user()->role_name }}</span>
+</div>
+
+<!-- статистика -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm text-center p-3 h-100">
+            <i class="fas fa-box text-primary fa-3x mb-2"></i>
+            <h5 class="card-title">Товары</h5>
+            <p class="display-6 fw-bold">{{ \App\Models\Product::count() }}</p>
+            <a href="{{ route('products.index') }}" class="btn btn-outline-primary btn-sm">Управление →</a>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm text-center p-3 h-100">
+            <i class="fas fa-map-marker-alt text-success fa-3x mb-2"></i>
+            <h5 class="card-title">Места хранения</h5>
+            <p class="display-6 fw-bold">{{ \App\Models\StorageLocation::count() }}</p>
+            <a href="{{ route('locations.index') }}" class="btn btn-outline-success btn-sm">Управление →</a>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm text-center p-3 h-100">
+            <i class="fas fa-layer-group text-info fa-3x mb-2"></i>
+            <h5 class="card-title">Партии</h5>
+            <p class="display-6 fw-bold">{{ \App\Models\Batch::count() }}</p>
+            <a href="{{ route('batches.index') }}" class="btn btn-outline-info btn-sm">Управление →</a>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm text-center p-3 h-100">
+            <i class="fas fa-exchange-alt text-warning fa-3x mb-2"></i>
+            <h5 class="card-title">Операции</h5>
+            <p class="display-6 fw-bold">{{ \App\Models\InventoryMovement::count() }}</p>
+            <a href="{{ route('movements.index') }}" class="btn btn-outline-warning btn-sm">Журнал →</a>
+        </div>
+    </div>
+</div>
+
+<!-- отчеты -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent fw-bold">
+                <i class="fas fa-chart-line"></i> Аналитика и отчёты
             </div>
-            
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Места хранения</h5>
-                        <p class="card-text">Ячейки, стеллажи, зоны</p>
-                        <a href="{{ route('locations.index') }}" class="btn btn-success">Перейти</a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Партии</h5>
-                        <p class="card-text">Учёт по срокам годности</p>
-                        <a href="{{ route('batches.index') }}" class="btn btn-info">Перейти</a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Операции</h5>
-                        <p class="card-text">Приёмка, отгрузка</p>
-                        <a href="{{ route('movements.index') }}" class="btn btn-warning">Перейти</a>
-                    </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <a href="{{ route('reports.stock') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-bar"></i> Остатки товаров
+                    </a>
+                    <a href="{{ route('reports.movements') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list"></i> Движения за период
+                    </a>
+                    <a href="{{ route('reports.expiring') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-hourglass-half"></i> Сроки годности
+                    </a>
+                    <a href="{{ route('reports.expired') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-times-circle"></i> Просрочка
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+
+<div class="row g-4">
+    <!-- последние операции -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent fw-bold">
+                <i class="fas fa-history"></i> Последние операции
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Дата</th>
+                                <th>Тип</th>
+                                <th>Товар</th>
+                                <th>Кол-во</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(\App\Models\InventoryMovement::with('product')->latest()->limit(5)->get() as $movement)
+                            <tr>
+                                <td>{{ $movement->created_at->format('d.m.Y H:i') }}</td>
+                                <td>{{ $movement->movement_type_name }}</td>
+                                <td>{{ $movement->product->name }}</td>
+                                <td>{{ $movement->quantity > 0 ? '+' : '' }}{{ $movement->quantity }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- популярные товары (по числу операций) -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent fw-bold">
+                <i class="fas fa-fire"></i> Часто используемые товары
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Товар</th>
+                                <th>Кол-во операций</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(\App\Models\Product::withCount('movements')->orderBy('movements_count', 'desc')->limit(5)->get() as $product)
+                            <tr>
+                                <td>{{ $product->name }}</td>
+                                <td>{{ $product->movements_count }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

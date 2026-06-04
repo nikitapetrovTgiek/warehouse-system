@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use Illuminate\Http\Request;
 
 class RoleController extends Controller
@@ -12,7 +13,8 @@ class RoleController extends Controller
      */
     public function index()
     {
-        //
+        $roles = Role::paginate(15);
+        return view('admin.roles.index', compact('roles'));
     }
 
     /**
@@ -20,7 +22,7 @@ class RoleController extends Controller
      */
     public function create()
     {
-        //
+        return view('admin.roles.create');
     }
 
     /**
@@ -28,38 +30,53 @@ class RoleController extends Controller
      */
     public function store(Request $request)
     {
-        //
-    }
+        $request->validate([
+            'name' => 'required|string|unique:roles',
+            'description' => 'nullable|string',
+        ]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
+        Role::create($request->all());
+
+        return redirect()->route('admin.roles.index')
+            ->with('success', 'Роль создана');
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Role $role)
     {
-        //
+         return view('admin.roles.edit', compact('role'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Role $role)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|unique:roles,name,' . $role->id,
+            'description' => 'nullable|string',
+        ]);
+
+        $role->update($request->all());
+
+        return redirect()->route('admin.roles.index')
+            ->with('success', 'Роль обновлена');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Role $role)
     {
-        //
+         if ($role->users()->count() > 0) {
+            return back()->with('error', 'Нельзя удалить роль, у которой есть пользователи');
+        }
+
+        $role->delete();
+
+        return redirect()->route('admin.roles.index')
+            ->with('success', 'Роль удалена');
     }
 }

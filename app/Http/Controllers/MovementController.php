@@ -30,21 +30,31 @@ class MovementController extends Controller
         $locations = StorageLocation::where('is_active', true)
             ->orderBy('name')
             ->get();
+        // все партии
+        $batches = Batch::with('product')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        return view('movements.receipt', compact('products', 'locations'));
+        return view('movements.receipt', compact('products', 'locations','batches'));
     }
     public function storeReceipt(Request $request)
     {
         // валидация
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'batch_number' => 'nullable|string|max:255',
-            'expiration_date' => 'nullable|date|after:today',
+            'batch_id' => 'required|exists:batches,id',
             'quantity' => 'required|integer|min:1',
             'location_id' => 'required|exists:storage_locations,id',
             'document_number' => 'nullable|string|max:255',
             'comments' => 'nullable|string',
         ]);
+        // проверка что партия относится к этому товару
+        $batch = Batch::findOrFail($validated['batch_id']);
+        if ($batch->product_id != $validated['product_id']) {
+            return back()
+                ->withInput()
+                ->withErrors(['batch_id' => 'Эта партия не принадлежит выбранному товару']);
+        }
         // проверка на вместимость места
         $location = StorageLocation::findOrFail($validated['location_id']);
         if ($location->capacity && $location->available_capacity < $validated['quantity']) {
@@ -55,21 +65,10 @@ class MovementController extends Controller
         // начало транзакции
         DB::beginTransaction();
         try {
-            // если номер партии есть создаем новую партию
-            $batchId = null;
-            if (!empty($validated['batch_number'])) {
-                $batch = Batch::create([
-                    'product_id' => $validated['product_id'],
-                    'batch_number' => $validated['batch_number'],
-                    'expiration_date' => $validated['expiration_date'] ?? null,
-                    'created_by' => Auth::id(),
-                ]);
-                $batchId = $batch->id;
-            }
-            // создание движения
+            // движение (приёмка)
             $movement = InventoryMovement::create([
                 'product_id' => $validated['product_id'],
-                'batch_id' => $batchId,
+                'batch_id' => $validated['batch_id'],
                 'to_location_id' => $validated['location_id'],
                 'user_id' => Auth::id(),
                 'movement_type' => 'receipt',
@@ -78,16 +77,15 @@ class MovementController extends Controller
                 'comments' => $validated['comments'] ?? null,
                 'status' => 'confirmed',
             ]);
-            // обновление вместимости места
+            // обновляем загрузку места
             $location->increment('current_load', $validated['quantity']);
-            // если нет ошибок транзакция сохраняется
             DB::commit();
+
             return redirect()
                 ->route('movements.index')
                 ->with('success', 'Приёмка успешно оформлена');
 
         } catch (\Exception $e) {
-            // если хоть где то ошибка то откатываем
             DB::rollBack();
             
             return back()
@@ -103,14 +101,31 @@ class MovementController extends Controller
             ->where('current_load', '>', 0) // только непустые
             ->orderBy('name')
             ->get();
+        $batches = Batch::with('product')
+            ->get()
+            ->map(function ($batch) {
+            // Находим места, где есть остаток этой партии
+            $locationIds = \App\Models\InventoryMovement::where('batch_id', $batch->id)
+                ->where('quantity', '>', 0)
+                ->pluck('to_location_id')
+                ->unique()
+                ->values()
+                ->toArray();
+            
+            // Добавляем свойство location_ids к объекту партии
+            $batch->location_ids = $locationIds;
+            
+            return $batch;
+        });
 
-        return view('movements.shipment', compact('products', 'locations'));
+        return view('movements.shipment', compact('products', 'locations', 'batches'));
     }
     // сохранить отгрузку
     public function storeShipment(Request $request)
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
+            'batch_id' => 'required|exists:batches,id',
             'location_id' => 'required|exists:storage_locations,id',
             'quantity' => 'required|integer|min:1',
             'document_number' => 'nullable|string|max:255',
@@ -132,11 +147,15 @@ class MovementController extends Controller
                 'from_location_id' => $validated['location_id'],
                 'user_id' => Auth::id(),
                 'movement_type' => 'shipment',
+                'batch_id' => $request->get('batch_id'), 
                 'quantity' => -$validated['quantity'], // отрицательное число
                 'document_number' => $validated['document_number'] ?? null,
                 'comments' => $validated['comments'] ?? null,
                 'status' => 'confirmed',
             ]);
+            if (!is_numeric($validated['quantity']) || $validated['quantity'] <= 0) {
+                throw new \Exception('Некорректное количество');
+            }
             // уменьшение нагруженносмти места
             $location->decrement('current_load', $validated['quantity']);
             DB::commit();
@@ -163,15 +182,39 @@ class MovementController extends Controller
             ->get();
         $toLocations = StorageLocation::where('is_active', true)
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(function ($location) {
+            // Добавляем виртуальное поле "свободно"
+            $location->available = $location->capacity 
+                ? $location->capacity - $location->current_load 
+                : null;
+            return $location;
+        });
+        $batches = Batch::with('product')
+            ->get()
+            ->map(function ($batch) {
+            // Находим места, где есть остаток этой партии
+            $locationIds = \App\Models\InventoryMovement::where('batch_id', $batch->id)
+                ->where('quantity', '>', 0)
+                ->pluck('to_location_id')
+                ->unique()
+                ->values()
+                ->toArray();
+            
+            // Добавляем свойство location_ids к объекту партии
+            $batch->location_ids = $locationIds;
+            
+            return $batch;
+        });
 
-        return view('movements.transfer', compact('products', 'fromLocations', 'toLocations'));
+        return view('movements.transfer', compact('products', 'fromLocations', 'toLocations','batches'));
     }
     // сохранить перемещение
     public function storeTransfer(Request $request)
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
+            'batch_id' => 'required|exists:batches,id',
             'from_location_id' => 'required|exists:storage_locations,id|different:to_location_id',
             'to_location_id' => 'required|exists:storage_locations,id',
             'quantity' => 'required|integer|min:1',
@@ -202,7 +245,8 @@ class MovementController extends Controller
                 'to_location_id' => $validated['to_location_id'],
                 'user_id' => Auth::id(),
                 'movement_type' => 'transfer',
-                'quantity' => 0,
+                'batch_id' => $request->get('batch_id'),
+                'quantity' => $quantity,
                 'comments' => $validated['comments'] ?? null,
                 'status' => 'confirmed',
             ]);
@@ -229,7 +273,22 @@ class MovementController extends Controller
             ->where('current_load', '>', 0) // только непустые
             ->orderBy('name')
             ->get();
-        $batches = Batch::with('product')->orderBy('created_at', 'desc')->get();
+        $batches = Batch::with('product')
+            ->get()
+            ->map(function ($batch) {
+            // Находим места, где есть остаток этой партии
+            $locationIds = \App\Models\InventoryMovement::where('batch_id', $batch->id)
+                ->where('quantity', '>', 0)
+                ->pluck('to_location_id')
+                ->unique()
+                ->values()
+                ->toArray();
+            
+            // Добавляем свойство location_ids к объекту партии
+            $batch->location_ids = $locationIds;
+            
+            return $batch;
+        });
 
         return view('movements.write-off', compact('products', 'locations', 'batches'));
     }
@@ -238,6 +297,7 @@ class MovementController extends Controller
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
+            'batch_id' => 'required|exists:batches,id',
             'location_id' => 'required|exists:storage_locations,id',
             'batch_id' => 'nullable|exists:batches,id',
             'quantity' => 'required|integer|min:1',
@@ -270,6 +330,7 @@ class MovementController extends Controller
                 'from_location_id' => $validated['location_id'],
                 'user_id' => Auth::id(),
                 'movement_type' => 'write_off',
+                'batch_id' => $request->get('batch_id'),
                 'quantity' => -$validated['quantity'], // отрицательное
                 'comments' => $comments,
                 'status' => 'confirmed',

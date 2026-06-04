@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\StorageLocation;
 use App\Models\InventoryMovement;
+use App\Models\Product;
+use App\Models\Batch;
 
 class StorageLocationController extends Controller
 {
@@ -59,38 +61,43 @@ class StorageLocationController extends Controller
      */
     public function show(StorageLocation $location)
     {
-        $location->load([
-            'movementsFrom' => function ($q) {
-                $q->with(['product', 'batch'])->latest()->limit(20);
-            },
-            'movementsTo' => function ($q) {
-                $q->with(['product', 'batch'])->latest()->limit(20);
-            }
-        ]);
+        // очистка кеша
+        $location->refresh();
 
-        // Получаем текущие товары в этом месте
-        $currentItems = InventoryMovement::query()
-            ->where(function ($q) use ($location) {
+        // берём все движения по этому месту из бд
+        $movements = InventoryMovement::where(function ($q) use ($location) {
                 $q->where('to_location_id', $location->id)
                 ->orWhere('from_location_id', $location->id);
             })
-            ->whereIn('movement_type', ['receipt', 'shipment', 'transfer', 'write_off'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy(function ($item) {
-                return $item->product_id . '-' . ($item->batch_id ?? '0');
-            })
-            ->map(function ($group) {
-                $lastMovement = $group->first();
-                $total = $group->sum('quantity');
-                return [
-                    'product' => $lastMovement->product,
-                    'batch' => $lastMovement->batch,
-                    'quantity' => $total,
-                    'last_movement' => $lastMovement->created_at
+            ->whereNull('deleted_at')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // считаем остатки по товарам и партиям
+        $items = [];
+        foreach ($movements as $m) {
+            $key = $m->product_id . '-' . ($m->batch_id ?? 0);
+            $items[$key] = ($items[$key] ?? 0) + $m->quantity;
+        }
+        // убираем нулевые и отрицательные
+        $items = array_filter($items, fn($qty) => $qty > 0);
+        // массив для шаблона
+        $currentItems = [];
+        foreach ($items as $key => $qty) {
+            $parts = explode('-', $key);
+            $product = Product::find($parts[0]);
+            $batch = ($parts[1] != 0) ? Batch::find($parts[1]) : null;
+
+            if ($product) {
+                $currentItems[] = [
+                    'product' => $product,
+                    'batch' => $batch,
+                    'quantity' => $qty,
+                    'last_movement' => now(),
                 ];
-            })
-            ->filter(fn($item) => $item['quantity'] > 0);
+            }
+        }
+
         return view('storage_locations.show', compact('location', 'currentItems'));
     }
 

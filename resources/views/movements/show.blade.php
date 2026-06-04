@@ -1,186 +1,141 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Просмотр движения</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .info-row {
-            display: flex;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .info-label {
-            font-weight: 600;
-            width: 150px;
-            color: #555;
-        }
-        .info-value {
-            flex: 1;
-        }
-        .type-badge {
-            font-size: 1rem;
-            padding: 8px 15px;
-        }
-    </style>
-</head>
-<body>
-    <!-- Навигация -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ route('dashboard') }}">Складская система</a>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-item nav-link">{{ Auth::user()->name }} ({{ Auth::user()->role_name }})</span>
-                <form method="POST" action="{{ route('logout') }}" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-light btn-sm">Выйти</button>
-                </form>
-            </div>
-        </div>
-    </nav>
+@extends('layouts.app')
 
-    <!-- Основной контент -->
-    <div class="container mt-4">
-        <!-- Кнопка "Назад" -->
-        <div class="mb-3">
-            <a href="{{ route('movements.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Назад к списку
-            </a>
-        </div>
+@section('title', 'Просмотр операции')
 
-        <!-- Карточка движения -->
-        <div class="card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Движение #{{ $movement->id }}</h4>
-                <span class="badge bg-light text-dark type-badge">
-                    {{ $movement->movement_type_name }}
-                </span>
+@section('content')
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">
+        <i class="fas fa-eye me-2"></i> Просмотр операции
+    </h1>
+    <a href="{{ route('movements.index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent fw-bold">
+                <i class="fas fa-info-circle"></i> Детали движения
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="info-row">
-                            <div class="info-label">Дата:</div>
-                            <div class="info-value">{{ $movement->created_at->format('d.m.Y H:i:s') }}</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Товар:</div>
-                            <div class="info-value">
-                                <a href="{{ route('products.show', $movement->product) }}">
-                                    {{ $movement->product->name }}
-                                </a>
-                                <br>
-                                <small class="text-muted">Арт: {{ $movement->product->article }}</small>
-                            </div>
-                        </div>
-                        @if($movement->batch)
-                        <div class="info-row">
-                            <div class="info-label">Партия:</div>
-                            <div class="info-value">
-                                <a href="{{ route('batches.show', $movement->batch) }}">
-                                    {{ $movement->batch->batch_number }}
-                                </a>
-                                @if($movement->batch->expiration_date)
-                                    <br>
-                                    <small class="text-muted">
-                                        Годен до: {{ $movement->batch->expiration_date->format('d.m.Y') }}
-                                    </small>
-                                @endif
-                            </div>
-                        </div>
-                        @endif
-                        <div class="info-row">
-                            <div class="info-label">Количество:</div>
-                            <div class="info-value">
-                                <span class="{{ $movement->quantity > 0 ? 'text-success' : 'text-danger' }} fw-bold">
-                                    {{ $movement->quantity > 0 ? '+' : '' }}{{ $movement->quantity }}
-                                </span> шт.
-                            </div>
-                        </div>
+                        <table class="table table-borderless">
+                            <tr>
+                                <th style="width: 140px">ID операции:</th>
+                                <td>{{ $movement->id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Дата и время:</th>
+                                <td>{{ $movement->created_at->format('d.m.Y H:i:s') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Тип операции:</th>
+                                <td>
+                                    @php
+                                        $typeColors = [
+                                            'receipt' => 'success',
+                                            'shipment' => 'warning',
+                                            'transfer' => 'info',
+                                            'write_off' => 'danger',
+                                        ];
+                                        $color = $typeColors[$movement->movement_type] ?? 'secondary';
+                                    @endphp
+                                    <span class="badge bg-{{ $color }} fs-6 py-2 px-3">
+                                        {{ $movement->movement_type_name }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Товар:</th>
+                                <td>
+                                    <a href="{{ route('products.show', $movement->product) }}">
+                                        {{ $movement->product->name }}
+                                    </a>
+                                    <br><small class="text-muted">{{ $movement->product->article }}</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Количество:</th>
+                                <td class="{{ $movement->quantity > 0 ? 'text-success fw-bold' : 'text-danger fw-bold' }} fs-5">
+                                    {{ $movement->quantity > 0 ? '+' : '' }}{{ $movement->quantity }} шт.
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Партия:</th>
+                                <td>
+                                    @if($movement->batch)
+                                        <a href="{{ route('batches.show', $movement->batch) }}">
+                                            {{ $movement->batch->batch_number }}
+                                        </a>
+                                        @if($movement->batch->expiration_date)
+                                            <br><small class="text-muted">
+                                                Срок: {{ \Carbon\Carbon::parse($movement->batch->expiration_date)->format('d.m.Y') }}
+                                            </small>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Документ:</th>
+                                <td>{{ $movement->document_number ?? '—' }}</td>
+                            </tr>
+                        </table>
                     </div>
                     <div class="col-md-6">
-                        <div class="info-row">
-                            <div class="info-label">Откуда:</div>
-                            <div class="info-value">
-                                @if($movement->fromLocation)
-                                    <a href="{{ route('locations.show', $movement->fromLocation) }}">
-                                        {{ $movement->fromLocation->name }}
-                                    </a>
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Куда:</div>
-                            <div class="info-value">
-                                @if($movement->toLocation)
-                                    <a href="{{ route('locations.show', $movement->toLocation) }}">
-                                        {{ $movement->toLocation->name }}
-                                    </a>
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </div>
-                        </div>
-                        @if($movement->batch)
-                        <div class="info-row">
-                            <div class="info-label">Партия:</div>
-                            <div class="info-value">
-                                <a href="{{ route('batches.show', $movement->batch) }}">
-                                    {{ $movement->batch->batch_number }}
-                                </a>
-                                @if($movement->batch->expiration_date)
-                                    <br><small>Годен до: {{ $movement->batch->expiration_date->format('d.m.Y') }}</small>
-                                @endif
-                            </div>
-                        </div>
-                        @endif
-                        <div class="info-row">
-                            <div class="info-label">Пользователь:</div>
-                            <div class="info-value">{{ $movement->user->name ?? '—' }}</div>
-                        </div>
-                        @if($movement->document_number)
-                        <div class="info-row">
-                            <div class="info-label">Документ:</div>
-                            <div class="info-value">
-                                {{ $movement->document_number }}
-                                @if($movement->document_type)
-                                    <br><small class="text-muted">{{ $movement->document_type }}</small>
-                                @endif
-                            </div>
-                        </div>
-                        @endif
+                        <table class="table table-borderless">
+                            <tr>
+                                <th style="width: 140px">Откуда:</th>
+                                <td>
+                                    @if($movement->fromLocation)
+                                        <a href="{{ route('locations.show', $movement->fromLocation) }}">
+                                            {{ $movement->fromLocation->name }}
+                                        </a>
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Куда:</th>
+                                <td>
+                                    @if($movement->toLocation)
+                                        <a href="{{ route('locations.show', $movement->toLocation) }}">
+                                            {{ $movement->toLocation->name }}
+                                        </a>
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Пользователь:</th>
+                                <td>{{ $movement->user->name ?? '—' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Статус:</th>
+                                <td>
+                                    @if($movement->status === 'confirmed')
+                                        <span class="badge bg-success">Подтверждён</span>
+                                    @else
+                                        <span class="badge bg-secondary">Черновик</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @if($movement->comments)
+                            <tr>
+                                <th>Комментарий:</th>
+                                <td colspan="2">{{ $movement->comments }}</td>
+                            </tr>
+                            @endif
+                        </table>
                     </div>
-                </div>
-
-                @if($movement->comments)
-                <div class="mt-3 p-3 bg-light rounded">
-                    <strong>Комментарий:</strong>
-                    <p class="mt-2 mb-0">{{ $movement->comments }}</p>
-                </div>
-                @endif
-
-                <div class="mt-3 text-muted small">
-                    Статус: {{ $movement->status === 'confirmed' ? 'Подтверждено' : 'Черновик' }}
                 </div>
             </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html> 
+</div>
+@endsection

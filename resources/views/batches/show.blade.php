@@ -1,220 +1,116 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Просмотр партии</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .info-row {
-            display: flex;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .info-label {
-            font-weight: 600;
-            width: 150px;
-            color: #555;
-        }
-        .info-value {
-            flex: 1;
-        }
-        .badge-expired {
-            background-color: #dc3545;
-            color: white;
-        }
-        .badge-expiring {
-            background-color: #ffc107;
-            color: black;
-        }
-        .badge-active {
-            background-color: #28a745;
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <!-- Навигация -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ route('dashboard') }}">Складская система</a>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-item nav-link">{{ Auth::user()->name }} ({{ Auth::user()->role_name }})</span>
-                <form method="POST" action="{{ route('logout') }}" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-light btn-sm">Выйти</button>
-                </form>
-            </div>
-        </div>
-    </nav>
+@extends('layouts.app')
 
-    <!-- Основной контент -->
-    <div class="container mt-4">
-        <!-- Кнопка "Назад" -->
-        <div class="mb-3">
-            <a href="{{ route('batches.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Назад к списку
-            </a>
-        </div>
+@section('title', 'Просмотр партии')
 
-        <!-- Основная информация -->
-        <div class="card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Партия: {{ $batch->batch_number }}</h4>
-                <div>
-                    <a href="{{ route('batches.edit', $batch) }}" class="btn btn-sm btn-light">
-                        <i class="fas fa-edit"></i> Редактировать
-                    </a>
-                </div>
+@section('content')
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">
+        <i class="fas fa-eye me-2"></i> Просмотр партии
+    </h1>
+    <div>
+        <a href="{{ route('batches.edit', $batch) }}" class="btn btn-warning me-2">
+            <i class="fas fa-edit"></i> Редактировать
+        </a>
+        <a href="{{ route('batches.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent fw-bold">
+                <i class="fas fa-info-circle"></i> Информация о партии
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="info-row">
-                            <div class="info-label">ID:</div>
-                            <div class="info-value">{{ $batch->id }}</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Товар:</div>
-                            <div class="info-value">
-                                <a href="{{ route('products.show', $batch->product) }}">
-                                    {{ $batch->product->name }}
-                                </a>
-                                <br>
-                                <small class="text-muted">Арт: {{ $batch->product->article }}</small>
-                            </div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Номер партии:</div>
-                            <div class="info-value">{{ $batch->batch_number }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="info-row">
-                            <div class="info-label">Статус:</div>
-                            <div class="info-value">
-                                @php
-                                    $status = $batch->status;
-                                    $statusClass = match($status) {
-                                        'expired' => 'badge-expired',
-                                        'expiring_soon' => 'badge-expiring',
-                                        default => 'badge-active'
-                                    };
-                                    $statusText = match($status) {
-                                        'expired' => 'Просрочено',
-                                        'expiring_soon' => 'Скоро истекает',
-                                        default => 'Активна'
-                                    };
-                                @endphp
-                                <span class="badge {{ $statusClass }}">{{ $statusText }}</span>
-                            </div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Дата производства:</div>
-                            <div class="info-value">{{ $batch->manufactured_date ? date('d.m.Y', strtotime($batch->manufactured_date)) : '—' }}</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Срок годности:</div>
-                            <div class="info-value">
-                                @if($batch->expiration_date)
-                                    {{ date('d.m.Y', strtotime($batch->expiration_date)) }}
-                                    @php
-                                        $days = (int)$batch->daysUntilExpiration();
-                                    @endphp
-                                    @if($days < 0)
-                                        <span class="text-danger ms-2">(просрочена на {{ abs($days) }} дн.)</span>
-                                    @elseif($days == 0)
-                                        <span class="text-warning ms-2">(истекает сегодня!)</span>
+                        <table class="table table-borderless">
+                            <tr><th style="width: 160px">Номер партии:</th><td><strong>{{ $batch->batch_number }}</strong></td></tr>
+                            <tr><th>Товар:</th><td>{{ $batch->product->name }} ({{ $batch->product->article }})</td></tr>
+                            <tr><th>Количество:</th><td>{{ $batch->movements->sum('quantity') }} шт.</td></tr>
+                            @if($batch->manufactured_date)
+                            <tr><th>Дата производства:</th><td>{{ \Carbon\Carbon::parse($batch->manufactured_date)->format('d.m.Y') }}</td></tr>
+                            @endif
+                            @if($batch->expiration_date)
+                            <tr>
+                                <th>Срок до:</th>
+                                <td>
+                                    {{ \Carbon\Carbon::parse($batch->expiration_date)->format('d.m.Y') }}
+                                    @php $daysLeft = round($batch->daysUntilExpiration()); @endphp
+                                    @if($daysLeft < 0)
+                                        <span class="text-danger ms-2">(просрочена на {{ abs($daysLeft) }} дн.)</span>
                                     @else
-                                        <span class="text-success ms-2">(осталось {{ $days }} дн.)</span>
+                                        <span class="text-success ms-2">(осталось {{ $daysLeft }} дн.)</span>
                                     @endif
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                @if($batch->certificate)
-                <div class="info-row">
-                    <div class="info-label">Сертификат:</div>
-                    <div class="info-value">{{ $batch->certificate }}</div>
-                </div>
-                @endif
-
-                @if($batch->notes)
-                <div class="mt-3">
-                    <strong>Примечания:</strong>
-                    <p class="mt-2">{{ $batch->notes }}</p>
-                </div>
-                @endif
-
-                <div class="mt-3 text-muted small">
-                    Создал: {{ $batch->creator->name ?? '—' }} | 
-                    Дата создания: {{ $batch->created_at->format('d.m.Y H:i') }}
-                </div>
-            </div>
-        </div>
-
-        <!-- Движения по партии -->
-        <div class="card mt-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">Движения товара по этой партии</h5>
-            </div>
-            <div class="card-body">
-                @if($movements->isEmpty())
-                    <p class="text-muted mb-0">Движений по этой партии пока нет</p>
-                @else
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Дата</th>
-                                    <th>Тип</th>
-                                    <th>Количество</th>
-                                    <th>Откуда</th>
-                                    <th>Куда</th>
-                                    <th>Пользователь</th>
-                                    <th>Документ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($movements as $movement)
-                                <tr>
-                                    <td>{{ $movement->created_at->format('d.m.Y H:i') }}</td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ $movement->movement_type_name }}</span>
-                                    </td>
-                                    <td class="{{ $movement->quantity > 0 ? 'text-success' : 'text-danger' }}">
-                                        {{ $movement->quantity > 0 ? '+' : '' }}{{ $movement->quantity }}
-                                    </td>
-                                    <td>{{ $movement->fromLocation->name ?? '—' }}</td>
-                                    <td>{{ $movement->toLocation->name ?? '—' }}</td>
-                                    <td>{{ $movement->user->name ?? '—' }}</td>
-                                    <td>{{ $movement->document_number ?? '—' }}</td>
-                                </tr>
-                                @endforeach
-                            </tbody>
+                                </td>
+                            </tr>
+                            @endif
+                            <tr><th>Статус:</th>
+                                <td>
+                                    @if($batch->expiration_date && $batch->isExpired())
+                                        <span class="badge bg-danger">Просрочена</span>
+                                    @elseif($batch->expiration_date && $batch->daysUntilExpiration() <= 30)
+                                        <span class="badge bg-warning text-dark">Скоро</span>
+                                    @else
+                                        <span class="badge bg-success">Активна</span>
+                                    @endif
+                                </td>
+                            </tr>
                         </table>
                     </div>
-                @endif
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr><th style="width: 160px">Создана:</th><td>{{ $batch->created_at->format('d.m.Y H:i') }}</td></tr>
+                            <tr><th>Кем создана:</th><td>{{ $batch->creator->name ?? '—' }}</td></tr>
+                            @if($batch->notes)
+                            <tr><th>Примечания:</th><td>{{ $batch->notes }}</td></tr>
+                            @endif
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html> 
+<!-- Движения этой партии -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent fw-bold">
+        <i class="fas fa-exchange-alt"></i> Движения партии
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Дата</th>
+                        <th>Тип</th>
+                        <th>Кол-во</th>
+                        <th>Откуда</th>
+                        <th>Куда</th>
+                        <th>Документ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($batch->movements as $movement)
+                        <tr>
+                            <td>{{ $movement->created_at->format('d.m.Y H:i') }}</td>
+                            <td>{{ $movement->movement_type_name }}</td>
+                            <td>{{ $movement->quantity > 0 ? '+' : '' }}{{ $movement->quantity }} шт.</td>
+                            <td>{{ $movement->fromLocation->name ?? '—' }}</td>
+                            <td>{{ $movement->toLocation->name ?? '—' }}</td>
+                            <td>{{ $movement->document_number ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">Нет движений</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endsection

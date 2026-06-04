@@ -107,7 +107,6 @@ class InventoryMovement extends Model
             'shipment' => 'Отгрузка',
             'transfer' => 'Перемещение',
             'write_off' => 'Списание',
-            'return' => 'Возврат',
             'inventory' => 'Инвентаризация',
         ];
         
@@ -119,7 +118,7 @@ class InventoryMovement extends Model
     public function getStockImpactAttribute()
     {
         // увеличивают
-        $positive = ['receipt', 'return'];
+        $positive = ['receipt'];
         
         // уменьшают
         $negative = ['shipment', 'write_off'];
